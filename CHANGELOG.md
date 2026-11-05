@@ -1,3 +1,9 @@
+## 1.0.0 (2026-11-05)
+
+### Features
+
+* **tokens:** gera e distribui design tokens para CDN, Android e iOS ([#6](https://github.com/Davidfdesousa/cicd-create-tokens/issues/6)) ([95f7a41](https://github.com/Davidfdesousa/cicd-create-tokens/commit/95f7a41c81f2d0a50adfc53793649fe019d5d0f2))
+
 ## 1.0.0 (2026-11-03)
 
 ### Features
