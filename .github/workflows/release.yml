@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, rc]
   workflow_dispatch:
 
 permissions:
@@ -24,6 +24,9 @@ jobs:
       contents: write # tag, release commit, GitHub Release
       issues: write # comment on issues fixed by the release
       pull-requests: write # comment on PRs included in the release
+    outputs:
+      version: ${{ steps.semantic.outputs.version }}
+      channel: ${{ steps.semantic.outputs.channel }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -42,8 +45,31 @@ jobs:
       - run: npm run build
 
       - name: Release
+        id: semantic
         env:
           # If `main` has a ruleset that blocks direct pushes, replace this with a token
           # (GitHub App or PAT) allowed to bypass it, so the release commit can be pushed.
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
         run: npx semantic-release
+
+      - name: Summary
+        if: steps.semantic.outputs.version != ''
+        env:
+          VERSION: ${{ steps.semantic.outputs.version }}
+          CHANNEL: ${{ steps.semantic.outputs.channel }}
+        run: |
+          {
+            echo "### Design tokens v$VERSION"
+            echo "Canal: \`$CHANNEL\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Only stable releases reach the consumers automatically. Prereleases from `rc`
+  # can be pulled on demand from each consumer's "Sync design tokens" workflow.
+  distribute:
+    name: Distribute
+    needs: release
+    if: needs.release.outputs.version != '' && github.ref_name == 'main'
+    uses: ./.github/workflows/distribute.yml
+    with:
+      version: ${{ needs.release.outputs.version }}
+    secrets: inherit

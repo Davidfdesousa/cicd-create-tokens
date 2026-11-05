@@ -61,3 +61,33 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:coverage
       - run: npm run build
+
+  design-tokens-preview:
+    name: Design tokens preview
+    if: github.event.action != 'edited'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # Builds the platform files with a preview version so reviewers can download
+      # exactly what the consumers would receive if this PR were released.
+      - name: Build tokens
+        env:
+          PREVIEW_VERSION: 0.0.0-preview.${{ github.event.pull_request.number || github.run_number }}
+        run: npm run tokens:build -- --version "$PREVIEW_VERSION"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: design-tokens-preview
+          path: dist/tokens/
+          retention-days: 7

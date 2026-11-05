@@ -22,6 +22,54 @@ Starter com Vite, TypeScript, Web Components (Lit), tokens CSS, login Google (Fi
 - **Versionamento:** Conventional Commits (commitlint + husky) + semantic-release
 - **CI/CD:** GitHub Actions (CI em PR, release na `main`) + Dependabot
 
+## Pipeline de design tokens
+
+Este repositório é a **fonte única** dos design tokens. Ele gera os arquivos de cada plataforma e os entrega automaticamente aos repositórios consumidores, sem cópia manual de `dist/` nem PR aberto à mão.
+
+```text
+tokens/colors.json ──► PR (CI + preview) ──► main ──► semantic-release ──► GitHub Release vX.Y.Z
+                                                                              │  tokens-web.zip
+                                                                              │  tokens-android.zip
+                                                                              │  tokens-ios.zip
+                                                                              ▼
+                                                        Distribute (repository_dispatch)
+                                     ┌────────────────────────┼────────────────────────┐
+                                     ▼                        ▼                        ▼
+                              cicd-bucket-cdn        cicd-bucket-android        cicd-bucket-ios
+                           Sync design tokens: baixa o zip da release e abre/atualiza o PR
+                           feat/design-tokens → develop ──► [DEV] → release/* [HOM] → main [PROD]
+```
+
+| Branch                    | O que acontece                                                                                  |
+| ------------------------- | ----------------------------------------------------------------------------------------------- |
+| `feat/**`, `fix/**`… (PR) | CI completo + job **Design tokens preview** com os arquivos gerados como artefato               |
+| `main`                    | release estável `X.Y.Z`, zips anexados à release e **distribuição automática** aos consumidores |
+| `rc`                      | pré-release `X.Y.Z-rc.N`, **sem** distribuição automática (o consumidor pode puxar sob demanda) |
+
+### Arquivos
+
+- `tokens/colors.json` — tokens no formato W3C Design Tokens (`$type` / `$value`)
+- `src/tokens/formatters.ts` — conversão para CSS, JSON, Android (`colors.xml`) e iOS (`DesignTokens.swift`), com testes
+- `scripts/build-tokens.ts` — `npm run tokens:build [-- --version X.Y.Z]` gera `dist/tokens/<plataforma>/`
+- `.github/workflows/release.yml` — release + chamada da distribuição
+- `.github/workflows/distribute.yml` — envia o evento `design-tokens-released` para cada consumidor; também roda manualmente (reenviar uma versão, ou fazer rollback de um consumidor)
+- `.github/workflows/sync-design-tokens.yml` — workflow **reutilizável** que os consumidores chamam: baixa o zip, substitui a pasta `design-tokens/` e abre/atualiza **um único PR** na branch `feat/design-tokens`
+
+### Segredos necessários
+
+| Onde                 | Secret           | Permissão (fine-grained PAT ou GitHub App)                                          |
+| -------------------- | ---------------- | ----------------------------------------------------------------------------------- |
+| `cicd-create-tokens` | `DISPATCH_TOKEN` | _Contents: read & write_ nos três consumidores (exigido pelo `repository_dispatch`) |
+| cada consumidor      | `SYNC_TOKEN`     | _Contents_ e _Pull requests: read & write_ no próprio repositório                   |
+
+Sem `SYNC_TOKEN` o PR ainda é aberto com o `GITHUB_TOKEN`, mas o GitHub não dispara o CI em PRs criados por ele.
+
+### Adicionar um novo consumidor
+
+1. Inclua o repositório na `matrix.consumer` e nas opções de `target` em `distribute.yml`.
+2. No consumidor, crie `.github/workflows/sync-design-tokens.yml` chamando o workflow reutilizável com o `asset` da plataforma (veja `cicd-bucket-android` como exemplo).
+3. Garanta que o `DISPATCH_TOKEN` tenha acesso ao novo repositório e crie o `SYNC_TOKEN` nele.
+
 ## Primeiros passos
 
 1. Use o Node da versão do projeto: `nvm use` (Node 24)

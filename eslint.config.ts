@@ -39,7 +39,7 @@ export default defineConfig(
     },
   },
   {
-    files: ['*.config.ts'],
+    files: ['*.config.ts', 'scripts/**/*.ts'],
     languageOptions: { globals: { ...globals.node } },
   },
   {

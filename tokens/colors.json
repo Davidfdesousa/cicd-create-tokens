@@ -1,0 +1,22 @@
+{
+  "color": {
+    "brand": {
+      "primary": { "$type": "color", "$value": "#6C5CE7" },
+      "secondary": { "$type": "color", "$value": "#00B894" }
+    },
+    "accent": {
+      "highlight": { "$type": "color", "$value": "#FD79A8" }
+    },
+    "feedback": {
+      "success": { "$type": "color", "$value": "#2ECC71" },
+      "warning": { "$type": "color", "$value": "#F39C12" },
+      "danger": { "$type": "color", "$value": "#E74C3C" },
+      "info": { "$type": "color", "$value": "#3498DB" }
+    },
+    "neutral": {
+      "0": { "$type": "color", "$value": "#FFFFFF" },
+      "100": { "$type": "color", "$value": "#F5F6FA" },
+      "900": { "$type": "color", "$value": "#1E272E" }
+    }
+  }
+}
