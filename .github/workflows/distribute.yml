@@ -1,24 +1,11 @@
 name: Distribute design tokens
 
-# Notifies each consumer repository that a version of the design tokens is
-# available. The consumer pulls its own asset from the GitHub Release and opens
-# the PR to its `develop` branch (see sync-design-tokens.yml).
-#
-# Runs automatically after a stable release, or manually to re-send a version
-# (e.g. a consumer was offline, or to roll a consumer back to an older version).
+# Manual re-send of a version that is already published: a consumer was offline,
+# a new consumer needs the current version, or a rollback. Stable releases are
+# distributed automatically by release.yml. The consumers are listed in the
+# TOKENS_CONSUMERS repository variable; the logic lives in Davidfdesousa/cicd-workflows.
 
 on:
-  workflow_call:
-    inputs:
-      version:
-        type: string
-        required: true
-      target:
-        type: string
-        default: all
-    secrets:
-      DISPATCH_TOKEN:
-        required: false
   workflow_dispatch:
     inputs:
       version:
@@ -26,60 +13,19 @@ on:
         type: string
         required: true
       target:
-        description: Repositório que deve receber
-        type: choice
+        description: '`all` ou o nome de um consumidor da variável TOKENS_CONSUMERS'
+        type: string
         default: all
-        options: [all, cicd-bucket-cdn, cicd-bucket-android, cicd-bucket-ios]
 
 permissions:
   contents: read
 
 jobs:
-  dispatch:
-    name: Notify ${{ matrix.consumer }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    strategy:
-      fail-fast: false
-      matrix:
-        # New consumer? Add it here and to the `target` options above, then add the
-        # caller workflow to the consumer repository (see README).
-        consumer: [cicd-bucket-cdn, cicd-bucket-android, cicd-bucket-ios]
-    env:
-      VERSION: ${{ inputs.version }}
-      TARGET: ${{ inputs.target }}
-      CONSUMER: ${{ matrix.consumer }}
-    steps:
-      - name: Check target
-        id: target
-        run: |
-          if [ "$TARGET" = "all" ] || [ -z "$TARGET" ] || [ "$TARGET" = "$CONSUMER" ]; then
-            echo "selected=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "Skipping $CONSUMER (target: $TARGET)"
-          fi
-
-      - name: Check that the release exists
-        if: steps.target.outputs.selected
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::Invalid version: $VERSION"; exit 1
-          fi
-          gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName
-
-      - name: Send repository_dispatch
-        if: steps.target.outputs.selected
-        env:
-          GH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
-        run: |
-          if [ -z "$GH_TOKEN" ]; then
-            echo "::error::Secret DISPATCH_TOKEN is missing. It needs Contents: read & write on $CONSUMER."
-            exit 1
-          fi
-          gh api "repos/$GITHUB_REPOSITORY_OWNER/$CONSUMER/dispatches" \
-            -f event_type=design-tokens-released \
-            -f "client_payload[version]=$VERSION" \
-            -f "client_payload[source]=$GITHUB_REPOSITORY"
-          echo "- \`$CONSUMER\` ← v$VERSION" >> "$GITHUB_STEP_SUMMARY"
+  distribute:
+    uses: Davidfdesousa/cicd-workflows/.github/workflows/tokens-distribute.yml@v1
+    with:
+      version: ${{ inputs.version }}
+      target: ${{ inputs.target }}
+      consumers: ${{ vars.TOKENS_CONSUMERS }}
+    secrets:
+      DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}

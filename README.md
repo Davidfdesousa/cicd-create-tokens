@@ -52,8 +52,9 @@ tokens/colors.json ──► PR (CI + preview) ──► main ──► semantic
 - `src/tokens/formatters.ts` — conversão para CSS, JSON, Android (`colors.xml`) e iOS (`DesignTokens.swift`), com testes
 - `scripts/build-tokens.ts` — `npm run tokens:build [-- --version X.Y.Z]` gera `dist/tokens/<plataforma>/`
 - `.github/workflows/release.yml` — release + chamada da distribuição
-- `.github/workflows/distribute.yml` — envia o evento `design-tokens-released` para cada consumidor; também roda manualmente (reenviar uma versão, ou fazer rollback de um consumidor)
-- `.github/workflows/sync-design-tokens.yml` — workflow **reutilizável** que os consumidores chamam: baixa o zip, substitui a pasta `design-tokens/` e abre/atualiza **um único PR** na branch `feat/design-tokens`
+- `.github/workflows/distribute.yml` — reenvio manual de uma versão já publicada (consumidor fora do ar, novo consumidor ou rollback)
+
+A lógica da distribuição, do sync nos consumidores, da validação e do deploy fica nos workflows reutilizáveis do [cicd-workflows](https://github.com/Davidfdesousa/cicd-workflows) (`@v1`), que também tem o passo a passo para implementar a esteira em outro projeto.
 
 ### Segredos necessários
 
@@ -64,10 +65,12 @@ tokens/colors.json ──► PR (CI + preview) ──► main ──► semantic
 
 Sem `SYNC_TOKEN` o PR ainda é aberto com o `GITHUB_TOKEN`, mas o GitHub não dispara o CI em PRs criados por ele.
 
+A lista de consumidores fica na variável `TOKENS_CONSUMERS` deste repositório (JSON, ex.: `["cicd-bucket-cdn","cicd-bucket-android","cicd-bucket-ios"]`).
+
 ### Adicionar um novo consumidor
 
-1. Inclua o repositório na `matrix.consumer` e nas opções de `target` em `distribute.yml`.
-2. No consumidor, crie `.github/workflows/sync-design-tokens.yml` chamando o workflow reutilizável com o `asset` da plataforma (veja `cicd-bucket-android` como exemplo).
+1. Inclua o repositório na variável `TOKENS_CONSUMERS`.
+2. No consumidor, siga o [Passo 3 do cicd-workflows](https://github.com/Davidfdesousa/cicd-workflows#passo-3--repositórios-consumidores).
 3. Garanta que o `DISPATCH_TOKEN` tenha acesso ao novo repositório e crie o `SYNC_TOKEN` nele.
 
 ## Primeiros passos

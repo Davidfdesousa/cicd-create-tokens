@@ -69,7 +69,9 @@ jobs:
     name: Distribute
     needs: release
     if: needs.release.outputs.version != '' && github.ref_name == 'main'
-    uses: ./.github/workflows/distribute.yml
+    uses: Davidfdesousa/cicd-workflows/.github/workflows/tokens-distribute.yml@v1
     with:
       version: ${{ needs.release.outputs.version }}
-    secrets: inherit
+      consumers: ${{ vars.TOKENS_CONSUMERS }}
+    secrets:
+      DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
